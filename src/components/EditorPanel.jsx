@@ -3,15 +3,26 @@ import EditorTabs from './EditorTabs';
 import CodeEditor from './CodeEditor';
 import StatusBar from './StatusBar';
 
-function EditorPanel({ activeTab, onTabChange, activeMobileView }) {
+function EditorPanel({ activeTab, onTabChange, activeMobileView, files, onCodeChange, isDark, }) {
   return (
+
     <div
       className={`flex-1 md:flex flex-col border-r border-gray-700 ${
         activeMobileView === 'preview' ? 'hidden' : 'flex'
       }`}
     >
       <EditorTabs activeTab={activeTab} onTabChange={onTabChange} />
-      <CodeEditor />
+      
+
+      
+      <div className='flex-1 overflow-hidden'>
+        <CodeEditor
+        value={files[activeTab]}
+        onChange={onCodeChange}
+        language={activeTab === "js" ? "javascript" : activeTab}
+        theme={isDark ? "dark" : "light"}
+        />
+      </div>
       <StatusBar />
     </div>
   );

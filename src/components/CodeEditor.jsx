@@ -1,39 +1,48 @@
 import React from 'react';
+import Editor from '@monaco-editor/react';
 
-function CodeEditor() {
+function CodeEditor({ value, onChange, language, theme }) {
+  const handleEditorChange = (newValue) => {
+    if (typeof newValue === 'string') {
+      onChange(newValue);
+    }
+  };
+
   return (
-    <div className="flex-1 bg-gray-900 flex overflow-hidden">
-      <div className="bg-gray-900 text-gray-600 text-right px-3 py-4 text-sm font-mono select-none border-r border-gray-800">
-        {[...Array(10).keys()].map(num => (
-          <div key={num}>{num + 1}</div>
-        ))}
-      </div>
-
-      <div className="flex-1 p-4 text-sm font-mono overflow-auto">
-        <div className="text-teal-400">&lt;!DOCTYPE html&gt;</div>
-        <div className="text-teal-400">&lt;html&gt;</div>
-        <div className="text-teal-400">&lt;head&gt;</div>
-        <div className="pl-4">
-          <span className="text-teal-400">&lt;title&gt;</span>
-          <span className="text-blue-300">My Web Page</span>
-          <span className="text-teal-400">&lt;/title&gt;</span>
+    <Editor
+      height="100%"
+      language={language}
+      value={value || ''}  
+      onChange={handleEditorChange}
+      theme={theme === 'dark' ? 'vs-dark' : 'vs-light'}
+      loading={
+        <div className="flex items-center justify-center h-full bg-gray-900 text-gray-400">
+          <div className="text-center">
+           <div>Loading...</div>
+          </div>
         </div>
-        <div className="text-teal-400">&lt;/head&gt;</div>
-        <div className="text-teal-400">&lt;body&gt;</div>
-        <div className="pl-4">
-          <span className="text-teal-400">&lt;h1&gt;</span>
-          <span className="text-blue-300">Hello World!</span>
-          <span className="text-teal-400">&lt;/h1&gt;</span>
-        </div>
-        <div className="pl-4">
-          <span className="text-teal-400">&lt;p&gt;</span>
-          <span className="text-blue-300">Welcome to my IDE</span>
-          <span className="text-teal-400">&lt;/p&gt;</span>
-        </div>
-        <div className="text-teal-400">&lt;/body&gt;</div>
-        <div className="text-teal-400">&lt;/html&gt;</div>
-      </div>
-    </div>
+      }
+      options={{
+        fontSize: 14,
+        fontFamily: 'Consolas, Monaco, monospace',
+        minimap: { enabled: false },
+        lineNumbers: 'on',
+        scrollBeyondLastLine: false,
+        automaticLayout: true,
+        tabSize: 2,
+        wordWrap: 'on',
+        padding: { top: 16 },
+        renderLineHighlight: 'all',
+        scrollbar: {
+          verticalScrollbarSize: 10,
+          horizontalScrollbarSize: 10,
+        },
+        suggestOnTriggerCharacters: true,
+        quickSuggestions: true,
+        formatOnPaste: true,
+        formatOnType: true,
+      }}
+    />
   );
 }
 
