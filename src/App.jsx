@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import Header from "./components/Header";
 import MobileTabs from "./components/MobileTabs";
 import EditorPanel from "./components/EditorPanel.jsx";
@@ -23,6 +23,7 @@ function App() {
   const [fontSize, setFontSize] = useState(14);
   const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(true);
   const [editorInstance, setEditorInstance] = useState(null); 
+  const [shareCode, setShareCode] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -53,11 +54,32 @@ function App() {
     console.log('Auto-save preference saved:', isAutoSaveEnabled);
   }, [isAutoSaveEnabled]);
 
+
+     useEffect(() => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const codeParam = urlParams.get('code');
+      if (codeParam) {
+        try {
+          const jsonString = atob(codeParam);
+          const parsedData = JSON.parse(jsonString);
+          setFiles({
+            html: parsedData.html || '',
+            css: parsedData.css || '',
+            js: parsedData.js || ''
+          });
+          console.log("Code loaded from URL parameter.");
+        } catch (error) {
+          console.log("Failed to load code from URL parameter:", error);
+        }
+      }
+    }, []);
+
+
   useEffect(() => {
     if (!isAutoSaveEnabled) {
       console.log("Auto-save is disabled.");
       return;
-    }
+    }   
     const timer = setTimeout(() => {
       try{
         localStorage.setItem('code-files', JSON.stringify(files));
@@ -69,6 +91,17 @@ function App() {
 
     return () => clearTimeout(timer);
   }, [files, isAutoSaveEnabled]);
+
+ useEffect(() => {
+  if (!shareCode) return;
+
+  const timer = setTimeout(() => {
+    setShareCode(false);
+  }, 3000);
+
+  return () => clearTimeout(timer);
+}, [shareCode]);
+
 
   const increaseFontSize = () => {
     setFontSize(prev => Math.min(prev + 2, 24));
@@ -97,6 +130,28 @@ function App() {
       console.log("failed to save:", error)
     }
   }
+  
+  const handleShareCode = async () => {
+    try{
+      const  shareData = {
+        html: files.html,
+        css: files.css,
+        js: files.js
+      }
+      const jsonString = JSON.stringify(shareData);
+      const base64Encoded = btoa(jsonString);
+      const shareableURL = `${window.location.origin}${window.location.pathname}?code=${base64Encoded}`;
+      await navigator.clipboard.writeText(shareableURL);
+      console.log("Shareable URL copied to clipboard:", shareableURL);
+
+    setTimeout(() => {
+      setShareCode("false");
+    }, 3000); 
+    } catch (error) {
+      console.log("Failed to generate shareable URL:", error);
+      alert("Error generating shareable link. Please try again.");
+    }
+  } 
 
   const handleEditorReady = (editor) => {
     setEditorInstance(editor);
@@ -148,7 +203,15 @@ function App() {
         onFormatCode={handleFormatCode}
         isAutoSaveEnabled={isAutoSaveEnabled}
         onToggleAutoSave={toggleAutoSave}
+        onShareCode={handleShareCode}
       />
+      {shareCode && (
+        <div className="fixed top-20 right-5 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-fade-in">
+         <span className="font-semibold">✓</span>
+          <span>Shareable URL copied to clipboard!</span>
+
+        </div>
+      )}
 
       <MobileTabs
         activeView={activeMobileView}
@@ -265,6 +328,7 @@ function App() {
         onDecreaseFontSize={decreaseFontSize}
         isAutoSaveEnabled={isAutoSaveEnabled}
         onToggleAutoSave={toggleAutoSave}
+        onShareCode={handleShareCode}
       />
     </div>
   );

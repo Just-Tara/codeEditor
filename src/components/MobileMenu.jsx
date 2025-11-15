@@ -11,7 +11,8 @@ function MobileMenu({
       isDark,
       onToggleTheme,
       onSaveCode, 
-      onFormatCode
+      onFormatCode,
+      onShareCode
       }) {
   if (!isOpen) return null;
 
@@ -96,7 +97,8 @@ function MobileMenu({
                   className="w-full text-left text-sm text-green-400 hover:text-green-300 py-2 flex items-center gap-2">
             <Save size={16} /> Save Project
           </button>
-          <button className="w-full text-left text-sm text-purple-400 hover:text-purple-300 py-2 flex items-center gap-2">
+          <button onClick={onShareCode}
+                  className="w-full text-left text-sm text-purple-400 hover:text-purple-300 py-2 flex items-center gap-2">
             <Share2 size={16} /> Share Code
           </button>
           <button onClick={onFormatCode}
