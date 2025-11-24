@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"; 
+import React, { useEffect, useState } from "react";
 import Header from "./components/Header";
 import AddNewFIle from "./components/AddNewFIle.jsx";
 import MobileTabs from "./components/MobileTabs";
@@ -58,12 +58,10 @@ function App() {
       if (savedFiles) {
         const parsedFiles = JSON.parse(savedFiles);
         
-        
         if (Array.isArray(parsedFiles)) {
           setFiles(parsedFiles);
           console.log("successfully loaded the saved files");
         } else {
-         
           console.log("Converting old file format to new array format");
           const convertedFiles = [
             {
@@ -86,7 +84,6 @@ function App() {
             }
           ];
           setFiles(convertedFiles);
-         
           localStorage.setItem('code-files', JSON.stringify(convertedFiles));
         }
       } else {
@@ -119,14 +116,6 @@ function App() {
     }
   }, []);
 
- 
-  useEffect(() => {
-    
-    const timer = setTimeout(() => {
-      handleRunCode();
-    }, 100);
-    return () => clearTimeout(timer);
-  }, []); 
   useEffect(() => {
     if (!isAutoSaveEnabled) {
       console.log("Auto-save is disabled.");
@@ -205,76 +194,204 @@ function App() {
     }
   };
 
-  const handleRunCode = () => {
+ const handleRunCode = () => {
     console.log("Running code...");
     
-    
+ 
     const htmlFiles = files.filter(f => f.language === 'html');
-    const cssFiles = files.filter(f => f.language === 'css' || f.language === 'scss');
-    const jsFiles = files.filter(f => f.language === 'javascript' || f.language === 'typescript');
+    const cssFiles = files.filter(f => f.language === 'css');
+    const jsFiles = files.filter(f => f.language === 'javascript');
     
+    let mainHtmlFile = htmlFiles.find(f => f.name.toLowerCase().includes('index'));
+    if (!mainHtmlFile) {
+      mainHtmlFile = htmlFiles[0];
+    }
+    
+    if (!mainHtmlFile) {
+      console.log("No HTML files found");
+      return;
+    }
+    
+   
+    const virtualHtmlFiles = {};
+    const virtualCssFiles = {};
+    const virtualJsFiles = {};
+    
+    htmlFiles.forEach(file => {
+      virtualHtmlFiles[file.name] = file.content;
+    });
+    
+    cssFiles.forEach(file => {
+      virtualCssFiles[file.name] = file.content;
+      const nameWithoutExt = file.name.replace(/\.(css)$/, '');
+      virtualCssFiles[nameWithoutExt] = file.content;
+    });
+    
+    jsFiles.forEach(file => {
+      virtualJsFiles[file.name] = file.content;
+      const nameWithoutExt = file.name.replace(/\.(js)$/, '');
+      virtualJsFiles[nameWithoutExt] = file.content;
+    });
 
-    const allHtml = htmlFiles.map(f => f.content).join('\n');
-    const allCss = cssFiles.map(f => f.content).join('\n');
-    const allJs = jsFiles.map(f => f.content).join('\n');
+  
+    const rawScriptContent = `
+      window.__virtualHtmlFiles__ = ${JSON.stringify(virtualHtmlFiles)};
+      window.__virtualCssFiles__ = ${JSON.stringify(virtualCssFiles)};
+      window.__virtualJsFiles__ = ${JSON.stringify(virtualJsFiles)};
+      window.__currentPage__ = "${mainHtmlFile.name}";
+      window.__loadedResources__ = { css: [], js: [] };
+      window.__modules__ = {};
+      
+      function loadVirtualCSS(filename) {
+        let content = window.__virtualCssFiles__[filename];
+        if (!content) {
+          const nameWithoutExt = filename.replace(/\\.(css)$/, '');
+          content = window.__virtualCssFiles__[nameWithoutExt];
+        }
+        if (!content) {
+          console.warn('CSS file not found:', filename);
+          return;
+        }
+        if (window.__loadedResources__.css.includes(filename)) {
+          return;
+        }
+        window.__loadedResources__.css.push(filename);
+        const styleElement = document.createElement('style');
+        styleElement.setAttribute('data-virtual-css', filename);
+        styleElement.textContent = content; 
+        document.head.appendChild(styleElement);
+        console.log('✅ CSS:', filename);
+      }
+      
+      // Removed complex JSX/TSX/Module functions
+      
+      function loadVirtualJS(filename) {
+        let content = window.__virtualJsFiles__[filename];
+        if (!content) {
+          const nameWithoutExt = filename.replace(/\\.(js)$/, '');
+          content = window.__virtualJsFiles__[nameWithoutExt];
+        }
+        if (!content) {
+          console.warn('JS file not found:', filename);
+          return;
+        }
+        if (window.__loadedResources__.js.includes(filename)) {
+          return;
+        }
+        window.__loadedResources__.js.push(filename);
+        
+        const scriptElement = document.createElement('script');
+        scriptElement.setAttribute('data-virtual-js', filename);
+        scriptElement.textContent = content;
+        document.body.appendChild(scriptElement);
+        
+        console.log('✅ JS:', filename);
+      }
+      
+      function loadExternalResources(htmlContent) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlContent, 'text/html');
+        doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+          const href = link.getAttribute('href');
+          if (href && (href.endsWith('.css'))) loadVirtualCSS(href);
+        });
+        doc.querySelectorAll('script[src]').forEach(script => {
+          const src = script.getAttribute('src');
+          if (src && /\\.(js)$/.test(src)) loadVirtualJS(src);
+        });
+      }
+      
+      function loadVirtualPage(filename) {
+        const content = window.__virtualHtmlFiles__[filename];
+        if (!content) {
+          console.error('❌ HTML not found:', filename);
+          return;
+        }
+        window.__currentPage__ = filename;
+        console.log('📄 Loading:', filename);
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(content, 'text/html');
+        
+        document.body.innerHTML = doc.body.innerHTML; // Set body first
+        
+        loadExternalResources(content); // Then load resources
     
+        attachLinkListeners();
+      }
+      
+      function attachLinkListeners() {
+        document.querySelectorAll('a').forEach(link => {
+          link.addEventListener('click', function(e) {
+            const href = this.getAttribute('href');
+            if (href && href.endsWith('.html')) {
+              e.preventDefault();
+              loadVirtualPage(href);
+            }
+          });
+        });
+      }
+      
+      console.log("Ready");
+      loadVirtualPage(window.__currentPage__);
+    `;
+
+
+    const encodedScript = btoa(unescape(encodeURIComponent(rawScriptContent)));
+
+    const resourceLoadingScript = `
+      (function() {
+        try {
+          const encoded = '${encodedScript}';
+          const decoded = decodeURIComponent(escape(atob(encoded)));
+          eval(decoded);
+        } catch(e) {
+          console.error('Failed to decode and run virtual script:', e);
+        }
+      })();
+    `;
     
-    const hasFullHtml = allHtml.includes('<!DOCTYPE') || allHtml.includes('<html');
+    const mainHtml = mainHtmlFile.content;
+    const hasFullHtml = mainHtml.includes('<!DOCTYPE') || mainHtml.includes('<html');
     
     let combinedCode;
     
     if (hasFullHtml) {
-   
-      const bodyMatch = allHtml.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-      const headMatch = allHtml.match(/<head[^>]*>([\s\S]*)<\/head>/i);
-      const bodyContent = bodyMatch ? bodyMatch[1] : allHtml;
-      const headContent = headMatch ? headMatch[1] : '';
+      const bodyCloseIndex = mainHtml.lastIndexOf('</body>');
       
-      combinedCode = `
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preview</title>
-    ${headContent}
-    <style>
-      ${allCss}
-    </style>
-  </head>
-  <body>
-    ${bodyContent}
-    <script>
-      ${allJs}
-    </script>
-  </body>
-</html>
-`;
+      if (bodyCloseIndex !== -1) {
+        const parts = [
+          mainHtml.slice(0, bodyCloseIndex),
+          '<script>',
+          resourceLoadingScript, 
+          '</script>',
+          mainHtml.slice(bodyCloseIndex)
+        ];
+        combinedCode = parts.join('');
+      } else {
+        combinedCode = [mainHtml, '<script>', resourceLoadingScript, '</script>'].join('');
+      }
     } else {
-      
-      combinedCode = `
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preview</title>
-    <style>
-      ${allCss}
-    </style>
-  </head>
-  <body>
-    ${allHtml}
-    <script>
-      ${allJs}
-    </script>
-  </body>
-</html>
-`;
+      const parts = [
+        '<!DOCTYPE html>\n',
+        '<html lang="en">\n',
+        '<head>\n',
+        '  <meta charset="UTF-8">\n',
+        '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n',
+        '  <title>Preview</title>\n',
+        '</head>\n',
+        '<body>\n',
+        mainHtml,
+        '\n<script>\n',
+        resourceLoadingScript, 
+        '\n</script>\n',
+        '</body>\n',
+        '</html>'
+      ];
+      combinedCode = parts.join('');
     }
     
     setOutputCode(combinedCode);
-  };
+};
 
   const getActiveFile = () => {
     return files.find(f => f.id === activeTab) || files[0];
@@ -300,7 +417,7 @@ function App() {
     }
 
     if (activeTab === fileId) {
-      const fileIndex = files.findIndex(f => f.id === fileId); // Fixed syntax
+      const fileIndex = files.findIndex(f => f.id === fileId);
       const newIndex = fileIndex > 0 ? fileIndex - 1 : 1;
       setActiveTab(files[newIndex].id);
     }
@@ -336,6 +453,7 @@ function App() {
           setActiveMobileView(view);
           if (view !== "preview") setActiveTab(view); 
         }}
+        files={files}
       />
 
       {isMobile ? (
