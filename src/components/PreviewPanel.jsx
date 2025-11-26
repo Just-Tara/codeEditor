@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { FileCode, Monitor, Tablet, Smartphone } from 'lucide-react';
+import { FileCode, Monitor, Tablet, Smartphone, Terminal } from 'lucide-react';
 
-function PreviewPanel({ activeMobileView, files, outputCode, fontSize }) {
+function PreviewPanel({ activeMobileView, files, outputCode, fontSize, pistonOutput  }) {
   const [deviceMode, setDeviceMode] = useState('desktop');
   
   const hasHtmlFiles = files.some(f => f.language === 'html');
@@ -13,6 +13,8 @@ function PreviewPanel({ activeMobileView, files, outputCode, fontSize }) {
     mobile: { width: '375px', height: '667px' }
   };
   
+  const isPistonResult = !!pistonOutput;
+
   return (
     <div
       className={`flex-1 md:flex flex-col ${
@@ -21,9 +23,18 @@ function PreviewPanel({ activeMobileView, files, outputCode, fontSize }) {
     >
       <div className="bg-gray-800 border-b border-gray-700 px-4 md:py-[9px] py-2 flex items-center justify-between">
         <span className="text-sm text-gray-300 font-medium flex items-center gap-2">
-          Live Preview
+          {isPistonResult ? (
+            <>
+              <Terminal size={16} /> Api OutPut
+            </>
+          ) : (
+            <>
+              <FileCode size={16}/> Live Preview
+            </>
+          )}
         </span>
-        <div className="hidden md:flex items-center gap-2">
+        {!isPistonResult && (
+          <div className="hidden md:flex items-center gap-2">
           <button
             onClick={() => setDeviceMode('desktop')}
             className={`p-1.5 rounded transition ${
@@ -58,12 +69,35 @@ function PreviewPanel({ activeMobileView, files, outputCode, fontSize }) {
             <Smartphone size={16} />
           </button>
         </div>
+        )}
       </div>
 
       <div className={`flex-1 bg-gray-100 overflow-auto flex items-start justify-center ${
-        deviceMode === 'desktop' ? '' : 'p-4'
+        deviceMode === 'desktop' && !isPistonResult ? '' : 'p-4'
       }`}>
-        {!outputCode || !hasHtmlFiles ? (
+        {isPistonResult ? (
+                    <div className="w-full h-full p-4">
+                        <h2 className="text-xl font-bold mb-2">
+                    
+                            {pistonOutput.type === 'error' ? '❌ Execution Error' : '✅ Output'} 
+                            <span className="text-sm font-normal ml-2 opacity-70 text-gray-500">
+                               
+                                ({pistonOutput.language.toUpperCase()}) 
+                            </span>
+                        </h2>
+                        <pre 
+                            className={`p-4 rounded-lg whitespace-pre-wrap font-mono text-sm overflow-auto max-h-full ${
+                                pistonOutput.type === 'error' 
+                                    ? 'bg-red-00  dark:bg-red-900/30 text-red-700 border border-red-800'
+                                    : 'bg-white text-gray-200 dark:bg-zinc-800  border border-gray-700'
+                            }`}
+                        >
+                            {pistonOutput.content} 
+                        </pre>
+                    </div>
+                ) : (
+                    
+                   !outputCode || !hasHtmlFiles ? (
           <div className="h-full w-full flex items-center justify-center bg-gray-50">
             <div className="text-center text-gray-400 p-8">
               <FileCode size={48} className="mx-auto mb-4 opacity-50" />
@@ -94,7 +128,10 @@ function PreviewPanel({ activeMobileView, files, outputCode, fontSize }) {
               style={{ fontSize: `${fontSize}px` }}
             />
           </div>
-        )}
+        )                
+
+      )}
+ 
       </div>
     </div>
   );

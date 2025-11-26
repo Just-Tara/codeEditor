@@ -6,15 +6,22 @@ import EditorPanel from "./components/EditorPanel.jsx";
 import PreviewPanel from "./components/PreviewPanel";
 import MobileMenu from "./components/MobileMenu";
 import Split from "@uiw/react-split";
-import { getDefaultContent, getLanguageById } from "./constant/Languages.jsx";
+import { getDefaultContent } from "./constants/Languages.jsx";
+import { excutePistonCode } from "./utils/PistonApi.jsx";
+import Console from "./components/Console.jsx";
 
 function App() {
   const [isDark, setIsDark] = useState(true);
+  const [pistonOutput, setPistonOutput] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('file-1');
   const [activeMobileView, setActiveMobileView] = useState("html");
   const [outputCode, setOutputCode] = useState("");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [consoleLogs, setConsoleLogs] = useState([]);
+  const [isConsoleOpen, setIsConsoleOpen] = useState(false)
+  
+
 
   const [files, setFiles] = useState([
     {
@@ -43,6 +50,25 @@ function App() {
   const [shareCode, setShareCode] = useState(false);
   const [isAddNewFileOpen, setIsAddNewFileOpen] = useState(false);
 
+
+  const PISTON_LANGUAGES = [
+    'python', 
+    'java', 
+    'php', 
+    'ruby', 
+    'go', 
+    'c', 
+    'cpp', 
+    'shell',
+    'javascript',
+    'typescript'];
+
+  
+ 
+
+  const compileScss = (scssCode) => scssCode.replace(/\$primary-color:\s*(.*?);[\s\S]*?color:\s*\$primary-color;/g, 'color: $1;');
+  const transpileTs = (tsCode) => tsCode.replace(/const\s+(\w+):\s*string\s*=\s*(.*?);/g, 'const $1 = $2;');
+    
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -194,13 +220,135 @@ function App() {
     }
   };
 
- const handleRunCode = () => {
+   const executeFontendCode = (code, language) => {
+    setConsoleLogs([]);
+    setIsConsoleOpen(true);
+
+    const addLog = (message, type = 'log') => {
+      const timestamp = new Date().toLocaleTimeString();
+      setConsoleLogs(prev => [...prev, {message, type, timestamp}]);
+    };
+
+    try{
+      const originalConsole = {
+        log: console.log,
+        error: console.error,
+        warn: console.warn,
+        info: console.info
+      };
+
+      const customConsole ={
+        log: (...args) => {
+          addLog(args.join (''), 'log');
+          originalConsole.log(...args);
+        },
+        error: (...args) => {
+          addLog(args.join(''), 'error');
+          originalConsole.error(...args);
+        },
+         warn: (...args) => {
+          addLog(args.join(''), 'warn');
+          originalConsole.error(...args);
+        },
+         info: (...args) => {
+          addLog(args.join(''), 'info');
+          originalConsole.error(...args);
+        },
+      };
+
+      let excutableCode = code;
+
+      if (language === 'typescript') {
+        excutableCode = code
+        .replace(/:\s*\w+(\[\])?/g, '') 
+        .replace(/interface\s+\w+\s*{[^}]*}/g, '') 
+        .replace(/type\s+\w+\s*=\s*[^;]+;/g, ''); 
+      }
+
+      const func = new Function('console', excutableCode);
+      func(customConsole);
+
+      addLog('Execution completed successfully', 'info');    
+    } catch (error) {
+      addLog(`Error: ${error.message}`, 'error');
+    }
+    };
+
+ const handleRunCode = async () => {
     console.log("Running code...");
+    setPistonOutput(null);
+
+    const currentActiveFile = getActiveFile();
+    if (currentActiveFile.language === 'javascript' || currentActiveFile.language === 'typescript') {
+      setOutputCode("");
+      executeFontendCode(currentActiveFile.content, currentActiveFile.language);
+      return;
+    }
+   
+
+  const hasWebFiles = files.some(f => 
+    f.language === 'html' || 
+    f.language === 'css' || 
+    f.language === 'scss' || 
+    (f.language === 'javascript' || f.language === 'typescript' && files.some(file => file.language === 'html'))
+  );
+
+  if (hasWebFiles && (currentActiveFile.language === 'html' || 
+      currentActiveFile.language === 'css' || 
+      currentActiveFile.language === 'scss')) {
+    handleGeneratePreview();
+    return;
+  }
     
- 
+    
+
+    if (PISTON_LANGUAGES.includes(currentActiveFile.language)) {
+      setOutputCode("");
+
+      try{
+        console.log(`Executing ${currentActiveFile.language} code via Piston API...`);
+        const result = await excutePistonCode(currentActiveFile.language, currentActiveFile.content);
+
+        
+        const runResult = result.run;
+            const output = (runResult.stdout || runResult.output || "") + (runResult.stderr || "");
+     
+        if (runResult.code === 0 && !runResult.stderr) {
+          setPistonOutput({
+            type: 'success',
+            content: output.trim() || `Execution finished sucessfully.`,
+            language: currentActiveFile.language
+          });
+        } else {
+          setPistonOutput({
+            type: 'error',
+            content: output.trim() || `Error during execution.`,
+            language: currentActiveFile.language
+          });
+        }
+      } catch (error) {
+        console.log("Piston API execution failed:", error);
+        setPistonOutput({
+          type: 'error',
+          content: `Failed to connect or execute via API: ${error.message}`,
+          language: currentActiveFile.language
+        });
+      } 
+      return;
+    }
+
+    setPistonOutput(null);
+  }
+
+  const handleClearConsole = () => {
+    setConsoleLogs([]);
+  }
+
+
+  const handleGeneratePreview = () => {
     const htmlFiles = files.filter(f => f.language === 'html');
-    const cssFiles = files.filter(f => f.language === 'css');
-    const jsFiles = files.filter(f => f.language === 'javascript');
+    const cssFiles = files.filter(f => f.language === 'css' || f.language === 'scss');
+    const jsFiles = files.filter(f => f.language === 'javascript' || f.language === 'typescript');
     
     let mainHtmlFile = htmlFiles.find(f => f.name.toLowerCase().includes('index'));
     if (!mainHtmlFile) {
@@ -222,9 +370,14 @@ function App() {
     });
     
     cssFiles.forEach(file => {
-      virtualCssFiles[file.name] = file.content;
+      let cssContent = file.content;
+      if (file.language === 'scss') {
+        cssContent = compileScss(file.content);
+      }
+
+      virtualCssFiles[file.name] = cssContent;
       const nameWithoutExt = file.name.replace(/\.(css)$/, '');
-      virtualCssFiles[nameWithoutExt] = file.content;
+      virtualCssFiles[nameWithoutExt] = cssContent;
     });
     
     jsFiles.forEach(file => {
@@ -425,7 +578,8 @@ function App() {
     setFiles(files.filter(f => f.id !== fileId));
   };
 
-  return (
+    
+return (
     <div className={`${isDark ? "dark" : ""} h-screen flex flex-col`}>
       <Header
         isDark={isDark}
@@ -476,6 +630,7 @@ function App() {
             files={files}
             outputCode={outputCode}
             fontSize={fontSize}
+            pistonOutput={pistonOutput}
           />
         </div>
       ) : (
@@ -547,6 +702,7 @@ function App() {
                 files={files}
                 outputCode={outputCode}
                 fontSize={fontSize}
+                pistonOutput={pistonOutput}
               />
             </div>
           </Split>
@@ -571,6 +727,13 @@ function App() {
         isOpen={isAddNewFileOpen}
         onClose={() => setIsAddNewFileOpen(false)}
         onCreateFIle={handleFIleCreation}
+      />
+
+      <Console
+        isConsoleOpen={isConsoleOpen}
+        onToggle= {() => setIsConsoleOpen(!isConsoleOpen)}
+        logs={consoleLogs}
+        onClear={handleClearConsole}
       />
     </div>
   );

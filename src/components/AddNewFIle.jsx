@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { X } from "lucide-react";
-import { LANGUAGES } from "../constant/Languages.jsx";
+import { LANGUAGES } from "../constants/Languages.jsx";
 
 function AddNewFIle({ isOpen, onClose, onCreateFIle }) {
     const [filename, setFilename] = useState("");
