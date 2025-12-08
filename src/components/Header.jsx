@@ -20,7 +20,7 @@ export default function Header ({
         <header className={` dark:bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center justify-between 
         flex-wrap gap-3`}> 
             <div className="flex items-center gap-4 flex-wrap"> 
-                <h1 className="text-blue-500 font-bold text-lg flex items-center gap-2"> <img src={logo} alt="logo-image" className='w-[23px]' /> CodeEditor</h1> 
+                <h1 className="text-blue-500 font-bold text-lg flex items-center gap-2"> <Code size={20}/> CodeEditor</h1> 
                 <button className={`cursor-pointer px-4 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition ${
                     isRunning
                         ? 'bg-gray-600 cursor-not-allowed'
