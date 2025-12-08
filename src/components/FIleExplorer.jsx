@@ -326,7 +326,7 @@ function FolderItem({
         </span>
         
        
-        <div className="hidden group-hover:flex items-center gap-1">
+        <div className=" md:hidden group-hover:flex items-center gap-1">
          
           <button
             onClick={(e) => {
@@ -443,7 +443,7 @@ function FileItem({
           e.stopPropagation();
           onFileDelete(projectId, folderId, file.id);
         }}
-        className="hidden group-hover:block p-1 hover:bg-red-600 rounded transition"
+        className=" md:hidden group-hover:block p-1 hover:bg-red-600 rounded transition"
         title="Delete File"
       >
         <Trash2 size={10} className="text-gray-400" />
