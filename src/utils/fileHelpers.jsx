@@ -50,3 +50,8 @@ export function getFilesFromProject(projects, projectId) {
 
   return files;
 }
+
+
+export function  getActiveFile(projects, activeTab)  {
+      return getAllFiles(projects).find(f => f.id === activeTab) || getAllFiles(projects)[0];
+    };
