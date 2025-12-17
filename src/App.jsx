@@ -157,7 +157,6 @@ function App() {
   };
   
   const handleShareCode = async () => {
-    alert("Generating share link...");
     try{
       const id = await saveProjectToCloud(projects);
       const shareUrl = `${window.location.origin}?id=${id}`;
