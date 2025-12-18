@@ -61,6 +61,10 @@ useEffect(() => {
 
 
  useEffect(() => {
+   const params = new URLSearchParams(window.location.search);
+   const sharedId = params.get("id");
+
+   if (sharedId) return; 
       try {
         const savedProjects = localStorage.getItem("code-projects");
         if (savedProjects) {
