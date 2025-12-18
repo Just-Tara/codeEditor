@@ -30,7 +30,7 @@ export const getProjectFromCloud = async (id) => {
         const { data, error} = await supabase
         .from('projects')
         .select('data')
-        .eq('id')
+        .eq('id', id)
         .single();
 
         if (error) return null;
