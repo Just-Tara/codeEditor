@@ -17,13 +17,13 @@ export default function Header ({
         isRunning
     }) 
     { return ( 
-        <header className={` dark:bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center justify-between 
-        flex-wrap gap-3`}> 
+        <header className="bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center justify-between 
+        flex-wrap gap-3"> 
             <div className="flex items-center gap-4 flex-wrap"> 
                 <div className="font-bold text-lg flex items-center gap-2">
                     <img src={logo} alt="Codrume-Logo" className='w-7'/>
 
-                        <h1 className={`dark:text-white text-xl leading-none tracking-wide`}>
+                        <h1 className="text-white text-xl leading-none tracking-wide">
                             Cod<span className="text-blue-500">rume</span>
                         </h1>
                     
